@@ -18,7 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <spring-boot.version>3.4.5</spring-boot.version> </properties>
+        <spring-boot.version>3.2.5</spring-boot.version> </properties>
 
     <modules>
         <module>data-loader-java</module>
