@@ -21,8 +21,8 @@ import java.util.Optional;
  * Manages transactions and interacts with the repository and mapper.
  */
 @Service
-@RequiredArgsConstructor // Automatically creates a constructor with final fields
-@Slf4j // Enables logging via SLF4J (e.g., log.info(...))
+@RequiredArgsConstructor
+@Slf4j
 public class ElectricVehicleService {
 
     private final ElectricVehicleRepository vehicleRepository;
@@ -35,10 +35,10 @@ public class ElectricVehicleService {
      */
     @Transactional(readOnly = true) // Transaction is read-only for performance
     public Page<ElectricVehicleDTO> getAllVehicles(Pageable pageable) {
-        log.debug("Fetching all vehicles. Page: {}, Size: {}, Sort: {}",
+        log.info("Fetching all vehicles. Page: {}, Size: {}, Sort: {}",
                 pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
         return vehicleRepository.findAll(pageable)
-                .map(vehicleMapper::toDTO); // Maps each entity to DTO
+                .map(vehicleMapper::toDTO);
     }
 
     /**
@@ -48,7 +48,7 @@ public class ElectricVehicleService {
      */
     @Transactional(readOnly = true)
     public Optional<ElectricVehicleDTO> getVehicleByVin(String vin) {
-        log.debug("Fetching vehicle by VIN: {}", vin);
+        log.info("Fetching vehicle by VIN: {}", vin);
         return vehicleRepository.findById(vin)
                 .map(vehicleMapper::toDTO);
     }
@@ -90,12 +90,14 @@ public class ElectricVehicleService {
                     return new EntityNotFoundException(errorMessage);
                 });
 
-        // The VIN from the path is authoritative for identifying the resource.
-        // If DTO VIN is present and different, log a warning.
+        // If DTO VIN is present and different, log error and throw exception.
         if (updateDto.getVin() != null && !vin.equals(updateDto.getVin())) {
-            log.warn("Path VIN {} does not match DTO VIN {}. Update will proceed for VIN specified in path ({}).",
-                    vin, updateDto.getVin(), vin);
+            String errorMessage = String.format("Path VIN (%s) does not match DTO VIN (%s). " +
+                    "The resource identified by the path cannot be changed.", vin, updateDto.getVin());
+            log.error(errorMessage);
+            throw new IllegalArgumentException(errorMessage);
         }
+        
         // The mapper will update fields of 'existingEntity' based on 'updateDto'.
         // The VIN of 'existingEntity' (the primary key) remains unchanged.
         vehicleMapper.updateEntityFromDto(updateDto, existingEntity);

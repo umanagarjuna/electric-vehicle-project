@@ -17,9 +17,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
                 version = "v1",
                 description = "This API provides CRUD operations and batch updates for electric vehicle population data.",
                 license = @License(name = "Apache 2.0", url = "http://www.apache.org/licenses/LICENSE-2.0.html")
-                // You can add contact = @Contact(...) here as well
         )
-        // You can also define servers = {@Server(url = "http://localhost:8080", description = "Local development server")}
 )
 public class EvApiApplication {
 
