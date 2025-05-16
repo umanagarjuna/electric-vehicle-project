@@ -7,7 +7,6 @@ import com.ev.apiservice.service.ElectricVehicleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,28 +24,31 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
+ *
  * REST Controller for managing Electric Vehicle population data.
  * Provides endpoints for CRUD operations and batch updates.
  */
 @RestController
-@RequestMapping("/api/v1/vehicles") // Base path for all endpoints in this controller
-@RequiredArgsConstructor // Lombok annotation for constructor injection of final fields
-@Slf4j // Lombok annotation for SLF4J logging
+@RequestMapping("/api/v1/vehicles")
+@RequiredArgsConstructor
+@Slf4j
 @Tag(name = "Electric Vehicle API", description = "API for managing electric vehicle population data")
 public class ElectricVehicleController {
 
     private final ElectricVehicleService vehicleService;
 
     @Operation(summary = "Get all electric vehicles (paginated)",
-            description = "Retrieves a paginated list of electric vehicles. Supports sorting (e.g., 'vin,asc' or 'modelYear,desc') and pagination parameters ('page', 'size').")
+            description = "Retrieves a paginated list of electric vehicles. Supports sorting (e.g., 'vin,asc' or 'modelYear,desc') " +
+                    "and pagination parameters ('page', 'size').")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved list of vehicles.",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(implementation = Page.class))) // Note: Schema for Page<ElectricVehicleDTO> is complex for Swagger
+                    schema = @Schema(implementation = Page.class)))
     @GetMapping
     public ResponseEntity<Page<ElectricVehicleDTO>> getAllVehicles(
-            @Parameter(description = "Pagination information (e.g., page=0&size=20&sort=vin,asc). Default size is 20, sorted by VIN ascending.")
+            @Parameter(description = "Pagination information (e.g., page=0&size=20&sort=vin,asc). " +
+                    "Default size is 20, sorted by VIN ascending.")
             @PageableDefault(size = 20, sort = "vin") Pageable pageable) {
-        log.debug("Received GET request for all vehicles. Page: {}, Size: {}, Sort: {}",
+        log.info("Received GET request for all vehicles. Page: {}, Size: {}, Sort: {}",
                 pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
         Page<ElectricVehicleDTO> vehicles = vehicleService.getAllVehicles(pageable);
         return ResponseEntity.ok(vehicles);
@@ -62,7 +64,7 @@ public class ElectricVehicleController {
     public ResponseEntity<ElectricVehicleDTO> getVehicleByVin(
             @Parameter(description = "VIN of the vehicle to be obtained.", required = true, example = "5YJSA1E2XP")
             @PathVariable String vin) {
-        log.debug("Received GET request for vehicle by VIN: {}", vin);
+        log.info("Received GET request for vehicle by VIN: {}", vin);
         return vehicleService.getVehicleByVin(vin)
                 .map(ResponseEntity::ok) // If found, wrap in ResponseEntity.ok()
                 .orElse(ResponseEntity.notFound().build()); // If not found, return 404
@@ -104,14 +106,13 @@ public class ElectricVehicleController {
         // If the DTO contains a VIN, it should ideally match the path VIN or be ignored.
         // The service layer handles the update logic based on the path 'vin'.
         if (updateDto.getVin() != null && !vin.equals(updateDto.getVin())) {
-            log.warn("Path VIN ({}) does not match DTO VIN ({}). The resource identified by the path VIN will be updated. " +
+            log.error("Path VIN ({}) does not match DTO VIN ({}). The resource identified by the path VIN will be updated. " +
                             "The VIN in the request body, if different, is typically ignored for PUT operations on a specific resource URL.",
                     vin, updateDto.getVin());
-            // Optionally, you could enforce that updateDto.vin must match path 'vin' or be null.
-            // updateDto.setVin(vin); // Or throw an error if they don't match.
+            throw new IllegalArgumentException("Path VIN (" + vin + ") must match DTO VIN (" + updateDto.getVin() + ")" +
+                    " for PUT operations.");
         } else if (updateDto.getVin() == null) {
-            // If VIN is not in DTO, set it from path to ensure service layer has it if needed for consistency,
-            // though the entity itself will be fetched by path 'vin'.
+            // If VIN is not in DTO, set it from path to ensure consistency
             updateDto.setVin(vin);
         }
 
@@ -136,7 +137,8 @@ public class ElectricVehicleController {
             description = "Performs a batch update on the Base MSRP for all vehicles matching the given make and model criteria.")
     @ApiResponse(responseCode = "200", description = "MSRP updated successfully. Response includes count of updated records.",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                    schema = @Schema(type="object", example = "{\"message\":\"Base MSRP updated successfully...\", \"make\":\"TESLA\", \"model\":\"Model Y\", \"updatedCount\":150}")))
+                    schema = @Schema(type="object", example = "{\"message\":\"Base MSRP updated successfully...\"," +
+                            " \"make\":\"TESLA\", \"model\":\"Model Y\", \"updatedCount\":150}")))
     @ApiResponse(responseCode = "400", description = "Invalid input data (e.g., missing make, model, or newBaseMSRP).")
     @PatchMapping("/batch/msrp") // Using PATCH as it's a partial update to a collection of resources
     public ResponseEntity<Map<String, Object>> updateBaseMsrpForMakeAndModel(
