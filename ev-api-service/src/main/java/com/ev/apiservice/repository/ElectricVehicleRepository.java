@@ -55,8 +55,6 @@ public interface ElectricVehicleRepository extends
      * @return The number of records updated.
      */
     @Modifying
-    // @Transactional // Transaction management is usually preferred at the service layer.
-    // Add here if this method needs its own transaction boundary when called directly.
     @Query("UPDATE ElectricVehicle ev SET ev.baseMSRP = :newBaseMSRP WHERE UPPER(ev.make) = UPPER(:make) " +
             "AND UPPER(ev.model) = UPPER(:model)")
     int updateBaseMsrpForMakeAndModel(@Param("make") String make, @Param("model") String model,

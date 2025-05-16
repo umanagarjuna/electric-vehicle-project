@@ -12,14 +12,14 @@ import java.math.BigDecimal;
  * JPA Entity representing an electric vehicle record in the database.
  */
 @Entity
-@Table(name = "electric_vehicle_population") // Maps this entity to the "electric_vehicle_population" table
+@Table(name = "electric_vehicle_population")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ElectricVehicle {
 
-    @Id // Marks 'vin' as the primary key
-    @Column(name = "vin", length = 10, nullable = false) // Maps to the 'vin' column, max length 10, not nullable
+    @Id
+    @Column(name = "vin", length = 10, nullable = false)
     private String vin;
 
     @Column(name = "county")
@@ -52,17 +52,22 @@ public class ElectricVehicle {
     @Column(name = "electric_range")
     private Integer electricRange;
 
-    @Column(name = "base_msrp", precision = 12, scale = 2) // For currency values
+    @Column(name = "base_msrp", precision = 12, scale = 2)
     private BigDecimal baseMSRP;
 
     @Column(name = "legislative_district", length = 50)
     private String legislativeDistrict;
 
-    @Column(name = "dol_vehicle_id", unique = true, nullable = false) // Must be unique and not null
+    /*
+     *  Must be unique and not null
+     */
+    @Column(name = "dol_vehicle_id", unique = true, nullable = false)
     private Long dolVehicleId;
 
-    // Specifies the column definition for PostGIS geometry type.
-    // SRID 4326 is standard for WGS84 (latitude/longitude).
+    /*
+     * Specifies the column definition for PostGIS geometry type.
+     * SRID 4326 is standard for WGS84 (latitude/longitude).
+     */
     @Column(name = "vehicle_location_point", columnDefinition="geometry(Point,4326)")
     private Point vehicleLocationPoint; // Uses org.locationtech.jts.geom.Point
 

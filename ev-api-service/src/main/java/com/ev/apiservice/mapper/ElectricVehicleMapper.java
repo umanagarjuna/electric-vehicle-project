@@ -100,10 +100,6 @@ public class ElectricVehicleMapper {
             return;
         }
 
-        // VIN is the ID, not updated here.
-        // DOL Vehicle ID is unique; updates should be handled carefully if allowed.
-        // entity.setDolVehicleId(dto.getDolVehicleId()); // Uncomment if DOL ID is updatable
-
         entity.setCounty(dto.getCounty());
         entity.setCity(dto.getCity());
         entity.setState(dto.getState());

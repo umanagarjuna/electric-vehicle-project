@@ -15,11 +15,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Global exception handler for the API service.
+ * Global exception handler for the EV API service.
  * Catches specified exceptions thrown by controllers or services and returns a standardized error response.
  */
-@ControllerAdvice // Indicates that this class assists controllers, particularly for exception handling.
-@Slf4j // Lombok for logging
+@ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**
@@ -108,13 +108,12 @@ public class GlobalExceptionHandler {
             this.fieldErrors = (fieldErrors == null || fieldErrors.isEmpty()) ? null : fieldErrors;
             this.globalErrors = (globalErrors == null || globalErrors.isEmpty()) ? null : globalErrors;
         }
-        public ErrorResponse(int status, String message, List<String> validationErrors) { // Legacy constructor for simple list of errors
+        public ErrorResponse(int status, String message, List<String> validationErrors) {
             this.status = status;
             this.message = message;
-            this.fieldErrors = null; // Not used by this constructor
+            this.fieldErrors = null;
             this.globalErrors = validationErrors;
         }
-
 
         // Getters are needed for Jackson serialization
         public int getStatus() { return status; }
