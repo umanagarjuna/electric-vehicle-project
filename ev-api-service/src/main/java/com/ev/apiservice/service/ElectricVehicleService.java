@@ -30,7 +30,7 @@ public class ElectricVehicleService {
 
     private final ElectricVehicleRepository vehicleRepository;
     private final ElectricVehicleMapper vehicleMapper;
-    private final Tracer tracer; // Micrometer Tracer injected by Spring Boot
+    private final Tracer tracer;
 
     /**
      * Retrieves a paginated list of all electric vehicles.
