@@ -283,4 +283,80 @@ public class ElectricVehicleMapperTest {
         // Assert
         assertThat(entity.getVehicleLocationPoint()).isNull();
     }
+
+    @Test
+    void toEntity_WhenDtoHasPartiallyNullPoint_ShouldHandleGracefully() {
+        // Arrange - PointDTO with one null coordinate
+        CreateElectricVehicleDTO dto = new CreateElectricVehicleDTO();
+        dto.setVin("TEST12345");
+        dto.setMake("TESLA");
+        dto.setModel("Model 3");
+
+        // Create a PointDTO with one null coordinate
+        PointDTO pointWithNullLat = new PointDTO(-122.33, null);
+        dto.setVehicleLocation(pointWithNullLat);
+
+        // Act
+        ElectricVehicle result = mapper.toEntity(dto);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getVehicleLocationPoint()).isNull(); // Should be null if any coordinate is null
+    }
+
+    @Test
+    void updateEntityFromDto_WithNullLocation_ShouldSetLocationToNull() {
+        // Arrange
+        ElectricVehicleDTO dto = new ElectricVehicleDTO();
+        dto.setVin("TEST12345");
+        dto.setVehicleLocation(null);
+
+        ElectricVehicle entity = new ElectricVehicle();
+        entity.setVin("TEST12345");
+        entity.setVehicleLocationPoint(geometryFactory.createPoint(new Coordinate(-122.33, 47.60)));
+
+        // Act
+        mapper.updateEntityFromDto(dto, entity);
+
+        // Assert
+        assertThat(entity.getVehicleLocationPoint()).isNull();
+    }
+
+    @Test
+    void updateEntityFromDto_WithPartiallyNullLocation_ShouldSetLocationToNull() {
+        // Arrange
+        ElectricVehicleDTO dto = new ElectricVehicleDTO();
+        dto.setVin("TEST12345");
+        dto.setVehicleLocation(new PointDTO(null, 47.60)); // Longitude is null
+
+        ElectricVehicle entity = new ElectricVehicle();
+        entity.setVin("TEST12345");
+        entity.setVehicleLocationPoint(geometryFactory.createPoint(new Coordinate(-122.33, 47.60)));
+
+        // Act
+        mapper.updateEntityFromDto(dto, entity);
+
+        // Assert
+        assertThat(entity.getVehicleLocationPoint()).isNull();
+    }
+
+    @Test
+    void toDTO_WhenEntityHasNullFields_ShouldMapToNullValues() {
+        // Arrange
+        ElectricVehicle entity = new ElectricVehicle();
+        entity.setVin("TEST12345");
+        // Leave most fields null
+
+        // Act
+        ElectricVehicleDTO result = mapper.toDTO(entity);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getVin()).isEqualTo("TEST12345");
+        assertThat(result.getMake()).isNull();
+        assertThat(result.getModel()).isNull();
+        assertThat(result.getModelYear()).isNull();
+        assertThat(result.getBaseMSRP()).isNull();
+        assertThat(result.getVehicleLocation()).isNull();
+    }
 }

@@ -1,6 +1,8 @@
 package com.ev.apiservice.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -19,6 +21,8 @@ import java.math.BigDecimal;
 public class ElectricVehicle {
 
     @Id
+    @NotNull(message = "VIN cannot be null")
+    @Size(max = 10, message = "VIN must be up to 10 characters")
     @Column(name = "vin", length = 10, nullable = false)
     private String vin;
 
@@ -61,6 +65,7 @@ public class ElectricVehicle {
     /*
      *  Must be unique and not null
      */
+    @NotNull(message = "DOL Vehicle ID cannot be null")
     @Column(name = "dol_vehicle_id", unique = true, nullable = false)
     private Long dolVehicleId;
 

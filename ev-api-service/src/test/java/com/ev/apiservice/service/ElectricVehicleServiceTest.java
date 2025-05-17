@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -278,5 +279,85 @@ public class ElectricVehicleServiceTest {
                 msrpRequestDTO.getMake(),
                 msrpRequestDTO.getModel(),
                 msrpRequestDTO.getNewBaseMSRP());
+    }
+
+    @Test
+    void getAllVehicles_WhenNoVehiclesExist_ShouldReturnEmptyPage() {
+        // Arrange
+        Page<ElectricVehicle> emptyPage = new PageImpl<>(Collections.emptyList());
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(vehicleRepository.findAll(pageable)).thenReturn(emptyPage);
+
+        // Act
+        Page<ElectricVehicleDTO> result = vehicleService.getAllVehicles(pageable);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isZero();
+        verify(vehicleRepository, times(1)).findAll(pageable);
+        verify(vehicleMapper, never()).toDTO(any()); // Mapper should never be called with empty list
+    }
+
+    @Test
+    void updateVehicle_WithNullDtoVin_ShouldUsePathVin() {
+        // Arrange
+        String pathVin = "TEST123456";
+        ElectricVehicleDTO updateDto = new ElectricVehicleDTO();
+        updateDto.setVin(null); // Null VIN in DTO
+        updateDto.setMake("TESLA");
+        updateDto.setModel("Model 3 Refresh");
+
+        ElectricVehicle existingEntity = new ElectricVehicle();
+        existingEntity.setVin(pathVin);
+        existingEntity.setMake("TESLA");
+        existingEntity.setModel("Model 3");
+
+        when(vehicleRepository.findById(pathVin)).thenReturn(Optional.of(existingEntity));
+        when(vehicleRepository.save(existingEntity)).thenReturn(existingEntity);
+        when(vehicleMapper.toDTO(existingEntity)).thenReturn(updateDto);
+
+        // Act
+        ElectricVehicleDTO result = vehicleService.updateVehicle(pathVin, updateDto);
+
+        // Assert
+        assertThat(result).isNotNull();
+        verify(vehicleRepository, times(1)).findById(pathVin);
+        verify(vehicleMapper, times(1)).updateEntityFromDto(updateDto, existingEntity);
+        verify(vehicleRepository, times(1)).save(existingEntity);
+    }
+
+    @Test
+    void updateBaseMsrpForMakeAndModel_WithZeroUpdates_ShouldReturnZero() {
+        // Arrange
+        UpdateMsrpRequestDTO request = new UpdateMsrpRequestDTO();
+        request.setMake("NONEXISTENT");
+        request.setModel("Model");
+        request.setNewBaseMSRP(BigDecimal.valueOf(50000));
+
+        when(vehicleRepository.updateBaseMsrpForMakeAndModel(
+                request.getMake(), request.getModel(), request.getNewBaseMSRP()
+        )).thenReturn(0);
+
+        // Act
+        int result = vehicleService.updateBaseMsrpForMakeAndModel(request);
+
+        // Assert
+        assertThat(result).isZero();
+        verify(vehicleRepository, times(1)).updateBaseMsrpForMakeAndModel(
+                request.getMake(), request.getModel(), request.getNewBaseMSRP()
+        );
+    }
+
+    @Test
+    void createVehicle_WithNullInput_ShouldThrowNullPointerException() {
+        // Act & Assert
+        assertThrows(NullPointerException.class, () -> vehicleService.createVehicle(null));
+
+        // Verify
+        verify(vehicleRepository, never()).existsById(any());
+        verify(vehicleMapper, never()).toEntity(any());
+        verify(vehicleRepository, never()).save(any());
     }
 }

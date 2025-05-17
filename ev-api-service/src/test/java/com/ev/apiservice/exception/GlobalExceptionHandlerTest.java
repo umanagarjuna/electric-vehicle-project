@@ -14,6 +14,7 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -122,5 +123,71 @@ public class GlobalExceptionHandlerTest {
         assertThat(response.getBody().getMessage()).contains("unexpected internal server error");
         assertThat(response.getBody().getFieldErrors()).isNull();
         assertThat(response.getBody().getGlobalErrors()).isNull();
+    }
+
+    @Test
+    void handleValidationExceptions_WithEmptyErrors_ShouldHandleGracefully() {
+        // Arrange
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        BindingResult bindingResult = mock(BindingResult.class);
+
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+        when(bindingResult.getFieldErrors()).thenReturn(Collections.emptyList());
+        when(bindingResult.getGlobalErrors()).thenReturn(Collections.emptyList());
+
+        // Act
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = exceptionHandler.handleValidationExceptions(ex);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(response.getBody().getMessage()).isEqualTo("Validation Failed");
+        // Both errors should be null since they were empty collections
+        assertThat(response.getBody().getFieldErrors()).isNull();
+        assertThat(response.getBody().getGlobalErrors()).isNull();
+    }
+
+    @Test
+    void errorResponse_GettersTest() {
+        // This test ensures the ErrorResponse inner class getters are covered
+
+        // Arrange - Create an error response with all fields populated
+        int status = 400;
+        String message = "Test Error Message";
+        var fieldErrors = Collections.singletonMap("field", "defaultMessage");
+        var globalErrors = Collections.singletonList("Global error message");
+
+        // Act
+        GlobalExceptionHandler.ErrorResponse response = new GlobalExceptionHandler.ErrorResponse(
+                status, message, fieldErrors, globalErrors
+        );
+
+        // Assert - Test all getters
+        assertThat(response.getStatus()).isEqualTo(status);
+        assertThat(response.getMessage()).isEqualTo(message);
+        assertThat(response.getFieldErrors()).isEqualTo(fieldErrors);
+        assertThat(response.getGlobalErrors()).isEqualTo(globalErrors);
+    }
+
+    @Test
+    void handleGenericException_CustomException_ShouldReturnInternalServerError() {
+        // Arrange
+        class CustomException extends Exception {
+            public CustomException(String message) {
+                super(message);
+            }
+        }
+
+        CustomException ex = new CustomException("A custom exception occurred");
+
+        // Act
+        ResponseEntity<GlobalExceptionHandler.ErrorResponse> response = exceptionHandler.handleGenericException(ex);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        assertThat(response.getBody().getMessage()).contains("internal server error");
     }
 }

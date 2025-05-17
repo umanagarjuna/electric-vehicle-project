@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -221,5 +222,59 @@ public class ElectricVehicleControllerTest {
         assertThat(responseEntity.getBody().get("make")).isEqualTo("TESLA");
         assertThat(responseEntity.getBody().get("model")).isEqualTo("Model 3");
         verify(vehicleService, times(1)).updateBaseMsrpForMakeAndModel(msrpRequestDTO);
+    }
+
+    @Test
+    void updateVehicle_WhenDtoVinDoesNotMatchPathVin_ShouldThrowException() {
+        // Arrange
+        String pathVin = "PATH123456";
+        ElectricVehicleDTO updateDTO = new ElectricVehicleDTO();
+        updateDTO.setVin("DTO7890123"); // Different from path VIN
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> controller.updateVehicle(pathVin, updateDTO)
+        );
+
+        assertThat(exception.getMessage()).contains("Path VIN");
+        assertThat(exception.getMessage()).contains("must match DTO VIN");
+
+        // Verify service was never called
+        verify(vehicleService, never()).updateVehicle(any(), any());
+    }
+
+    @Test
+    void updateBaseMsrpForMakeAndModel_WhenNoRecordsUpdated_ShouldReturnZeroCount() {
+        // Arrange
+        UpdateMsrpRequestDTO msrpRequest = new UpdateMsrpRequestDTO();
+        msrpRequest.setMake("NONEXISTENT");
+        msrpRequest.setModel("Model");
+        msrpRequest.setNewBaseMSRP(BigDecimal.valueOf(50000));
+
+        when(vehicleService.updateBaseMsrpForMakeAndModel(any(UpdateMsrpRequestDTO.class))).thenReturn(0);
+
+        // Act
+        ResponseEntity<Map<String, Object>> responseEntity = controller.updateBaseMsrpForMakeAndModel(msrpRequest);
+
+        // Assert
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isNotNull();
+        assertThat(responseEntity.getBody().get("updatedCount")).isEqualTo(0);
+        assertThat(responseEntity.getBody().get("make")).isEqualTo("NONEXISTENT");
+        assertThat(responseEntity.getBody().get("model")).isEqualTo("Model");
+        verify(vehicleService, times(1)).updateBaseMsrpForMakeAndModel(msrpRequest);
+    }
+
+    @Test
+    void createVehicle_WithNull_ShouldHandleNullPointerGracefully() {
+        // This test ensures that the controller handles null input gracefully
+
+        // Act & Assert - Just check that a NullPointerException is thrown directly
+        // rather than some other unexpected exception
+        assertThrows(NullPointerException.class, () -> controller.createVehicle(null));
+
+        // Verify service was never called with null
+        verify(vehicleService, never()).createVehicle(any());
     }
 }

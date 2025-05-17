@@ -9,6 +9,9 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.transaction.annotation.Transactional;
@@ -147,5 +150,117 @@ public class ElectricVehicleRepositoryTest {
 
         // Assert
         assertThat(vehicleRepository.existsById(vin)).isFalse();
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void findAll_WithPagingAndSorting_ShouldReturnSortedPage() {
+        // Arrange
+        PageRequest pageRequest = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "modelYear", "make"));
+
+        // Act
+        Page<ElectricVehicle> result = vehicleRepository.findAll(pageRequest);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(3); // Should return first page with 3 items
+
+        // Verify sorting (modelYear DESC, make DESC)
+        List<ElectricVehicle> content = result.getContent();
+        for (int i = 0; i < content.size() - 1; i++) {
+            // Either the current item's modelYear is greater than the next
+            // or if modelYears are equal, make should be lexicographically greater or equal
+            ElectricVehicle current = content.get(i);
+            ElectricVehicle next = content.get(i + 1);
+
+            assertThat(current.getModelYear() >= next.getModelYear()).isTrue();
+            if (current.getModelYear().equals(next.getModelYear())) {
+                assertThat(current.getMake().compareTo(next.getMake()) >= 0).isTrue();
+            }
+        }
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void updateBaseMsrpForMakeAndModel_WhenNoMatches_ShouldReturnZero() {
+        // Arrange
+        String make = "NONEXISTENT";
+        String model = "Nonexistent Model";
+        BigDecimal newMsrp = new BigDecimal("99999.99");
+
+        // Act
+        int updatedCount = vehicleRepository.updateBaseMsrpForMakeAndModel(make, model, newMsrp);
+
+        // Assert
+        assertThat(updatedCount).isZero();
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void deleteById_WhenVehicleDoesNotExist_ShouldCompleteWithoutChangingData() {
+        // Arrange
+        String nonExistentId = "NONEXISTENT";
+        assertThat(vehicleRepository.existsById(nonExistentId)).isFalse();
+
+        // Act
+        vehicleRepository.deleteById(nonExistentId); // This doesn't throw an exception
+
+        // Assert - Should still not exist after the delete operation
+        assertThat(vehicleRepository.existsById(nonExistentId)).isFalse();
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void findByMakeIgnoreCase_WithCaseMismatch_ShouldReturnMatchesIgnoringCase() {
+        // Act - Use mixed case for search
+        List<ElectricVehicle> results = vehicleRepository.findByMakeIgnoreCase("Tesla");
+
+        // Assert
+        assertThat(results).isNotEmpty();
+        assertThat(results).allMatch(v -> v.getMake().equalsIgnoreCase("TESLA"));
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void existsById_ShouldReturnTrueForExistingVehicle() {
+        // Act
+        boolean exists = vehicleRepository.existsById("SAMPLE1234");
+
+        // Assert
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void existsById_ShouldReturnFalseForNonExistingVehicle() {
+        // Act
+        boolean exists = vehicleRepository.existsById("NONEXISTENT");
+
+        // Assert
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void count_ShouldReturnCorrectNumberOfVehicles() {
+        // Act
+        long count = vehicleRepository.count();
+
+        // Assert - Sample data has 7 vehicles
+        assertThat(count).isEqualTo(7);
+    }
+
+    @Test
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void count_WithEmptyDatabase_ShouldReturnZero() {
+        // Act
+        long count = vehicleRepository.count();
+
+        // Assert
+        assertThat(count).isZero();
     }
 }
