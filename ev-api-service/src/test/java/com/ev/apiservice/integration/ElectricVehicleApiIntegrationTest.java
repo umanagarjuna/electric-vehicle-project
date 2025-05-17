@@ -1,5 +1,6 @@
 package com.ev.apiservice.integration;
 
+import com.ev.apiservice.config.H2GisTestConfig;
 import com.ev.apiservice.dto.CreateElectricVehicleDTO;
 import com.ev.apiservice.dto.ElectricVehicleDTO;
 import com.ev.apiservice.dto.PointDTO;
@@ -14,6 +15,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
@@ -34,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@Import(H2GisTestConfig.class)
 public class ElectricVehicleApiIntegrationTest {
 
     @Autowired
@@ -54,7 +57,7 @@ public class ElectricVehicleApiIntegrationTest {
     void setUp() {
         // Setup test DTOs
         createDTO = new CreateElectricVehicleDTO();
-        createDTO.setVin("TESTAPI1234");
+        createDTO.setVin("TESTAPI123"); // 10 char max
         createDTO.setMake("TESLA");
         createDTO.setModel("Model 3");
         createDTO.setModelYear(2023);
@@ -73,7 +76,7 @@ public class ElectricVehicleApiIntegrationTest {
         createDTO.setVehicleLocation(new PointDTO(-122.33207, 47.60611));
 
         updateDTO = new ElectricVehicleDTO();
-        updateDTO.setVin("SAMPLE12345"); // Should match a VIN in sample-data.sql
+        updateDTO.setVin("SAMPLE1234"); // 10 char max
         updateDTO.setMake("TESLA");
         updateDTO.setModel("Model 3 Performance");
         updateDTO.setModelYear(2023);
@@ -114,15 +117,15 @@ public class ElectricVehicleApiIntegrationTest {
     @Test
     @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
     void getVehicleByVin_WhenVehicleExists_ShouldReturnVehicle() throws Exception {
-        mockMvc.perform(get("/api/v1/vehicles/{vin}", "SAMPLE12345"))
+        mockMvc.perform(get("/api/v1/vehicles/{vin}", "SAMPLE1234"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.vin", is("SAMPLE12345")));
+                .andExpect(jsonPath("$.vin", is("SAMPLE1234")));
     }
 
     @Test
     void getVehicleByVin_WhenVehicleDoesNotExist_ShouldReturnNotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/vehicles/{vin}", "NONEXISTENT"))
+        mockMvc.perform(get("/api/v1/vehicles/{vin}", "NONEXIST"))
                 .andExpect(status().isNotFound());
     }
 
@@ -135,12 +138,12 @@ public class ElectricVehicleApiIntegrationTest {
                         .content(dtoJson))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.vin", is("TESTAPI1234")))
+                .andExpect(jsonPath("$.vin", is("TESTAPI123")))
                 .andExpect(jsonPath("$.make", is("TESLA")))
                 .andExpect(jsonPath("$.model", is("Model 3")));
 
         // Verify vehicle was persisted
-        Optional<ElectricVehicle> savedVehicle = vehicleRepository.findById("TESTAPI1234");
+        Optional<ElectricVehicle> savedVehicle = vehicleRepository.findById("TESTAPI123");
         assertThat(savedVehicle).isPresent();
         assertThat(savedVehicle.get().getMake()).isEqualTo("TESLA");
     }
@@ -170,16 +173,16 @@ public class ElectricVehicleApiIntegrationTest {
     void updateVehicle_WithValidData_ShouldUpdateAndReturnVehicle() throws Exception {
         String dtoJson = objectMapper.writeValueAsString(updateDTO);
 
-        mockMvc.perform(put("/api/v1/vehicles/{vin}", "SAMPLE12345")
+        mockMvc.perform(put("/api/v1/vehicles/{vin}", "SAMPLE1234")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(dtoJson))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.vin", is("SAMPLE12345")))
+                .andExpect(jsonPath("$.vin", is("SAMPLE1234")))
                 .andExpect(jsonPath("$.model", is("Model 3 Performance")));
 
         // Verify vehicle was updated
-        Optional<ElectricVehicle> updatedVehicle = vehicleRepository.findById("SAMPLE12345");
+        Optional<ElectricVehicle> updatedVehicle = vehicleRepository.findById("SAMPLE1234");
         assertThat(updatedVehicle).isPresent();
         assertThat(updatedVehicle.get().getModel()).isEqualTo("Model 3 Performance");
     }
@@ -187,10 +190,10 @@ public class ElectricVehicleApiIntegrationTest {
     @Test
     void updateVehicle_WithMismatchedVins_ShouldReturnBadRequest() throws Exception {
         // The DTO contains a VIN that doesn't match the path parameter
-        updateDTO.setVin("DIFFERENT123");
+        updateDTO.setVin("DIFF12345");
         String dtoJson = objectMapper.writeValueAsString(updateDTO);
 
-        mockMvc.perform(put("/api/v1/vehicles/{vin}", "SAMPLE12345")
+        mockMvc.perform(put("/api/v1/vehicles/{vin}", "SAMPLE1234")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(dtoJson))
                 .andExpect(status().isBadRequest())
@@ -202,18 +205,18 @@ public class ElectricVehicleApiIntegrationTest {
     @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
     void deleteVehicle_WhenVehicleExists_ShouldDeleteVehicle() throws Exception {
         // Verify vehicle exists before deletion
-        assertThat(vehicleRepository.existsById("SAMPLE12345")).isTrue();
+        assertThat(vehicleRepository.existsById("SAMPLE1234")).isTrue();
 
-        mockMvc.perform(delete("/api/v1/vehicles/{vin}", "SAMPLE12345"))
+        mockMvc.perform(delete("/api/v1/vehicles/{vin}", "SAMPLE1234"))
                 .andExpect(status().isNoContent());
 
         // Verify vehicle was deleted
-        assertThat(vehicleRepository.existsById("SAMPLE12345")).isFalse();
+        assertThat(vehicleRepository.existsById("SAMPLE1234")).isFalse();
     }
 
     @Test
     void deleteVehicle_WhenVehicleDoesNotExist_ShouldReturnNotFound() throws Exception {
-        mockMvc.perform(delete("/api/v1/vehicles/{vin}", "NONEXISTENT"))
+        mockMvc.perform(delete("/api/v1/vehicles/{vin}", "NONEXIST"))
                 .andExpect(status().isNotFound());
     }
 

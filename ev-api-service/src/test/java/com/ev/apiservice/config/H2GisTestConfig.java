@@ -2,12 +2,14 @@ package com.ev.apiservice.config;
 
 import org.h2gis.functions.factory.H2GISFunctions;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.jdbc.datasource.DataSourceUtils;
-import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
 
 import javax.sql.DataSource;
 import jakarta.annotation.PostConstruct;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 

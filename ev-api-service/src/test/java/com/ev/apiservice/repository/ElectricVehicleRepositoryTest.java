@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @Import(H2GisTestConfig.class)
 @ActiveProfiles("test")
+@Transactional
 public class ElectricVehicleRepositoryTest {
 
     @Autowired
@@ -29,18 +31,20 @@ public class ElectricVehicleRepositoryTest {
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Test
-    @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})  // Assumes you have these SQL scripts for test setup
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void findById_WhenVehicleExists_ShouldReturnVehicle() {
         // Act
-        Optional<ElectricVehicle> result = vehicleRepository.findById("SAMPLE12345");  // Should match a VIN in sample-data.sql
+        Optional<ElectricVehicle> result = vehicleRepository.findById("SAMPLE1234");  // Should match a VIN in sample-data.sql
 
         // Assert
         assertThat(result).isPresent();
-        assertThat(result.get().getVin()).isEqualTo("SAMPLE12345");
+        assertThat(result.get().getVin()).isEqualTo("SAMPLE1234");
     }
 
     @Test
-    @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void findById_WhenVehicleDoesNotExist_ShouldReturnEmpty() {
         // Act
         Optional<ElectricVehicle> result = vehicleRepository.findById("NONEXISTENT");
@@ -50,7 +54,8 @@ public class ElectricVehicleRepositoryTest {
     }
 
     @Test
-    @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void findByMakeIgnoreCase_ShouldReturnMatchingVehicles() {
         // Act
         List<ElectricVehicle> result = vehicleRepository.findByMakeIgnoreCase("TESLA");  // Should match entries in sample-data.sql
@@ -61,7 +66,8 @@ public class ElectricVehicleRepositoryTest {
     }
 
     @Test
-    @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void findByModelYear_ShouldReturnMatchingVehicles() {
         // Act
         List<ElectricVehicle> result = vehicleRepository.findByModelYear(2023);  // Should match entries in sample-data.sql
@@ -72,7 +78,8 @@ public class ElectricVehicleRepositoryTest {
     }
 
     @Test
-    @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void findByMakeIgnoreCaseAndModelIgnoreCase_ShouldReturnMatchingVehicles() {
         // Act
         List<ElectricVehicle> result = vehicleRepository.findByMakeIgnoreCaseAndModelIgnoreCase("TESLA", "Model 3");
@@ -85,7 +92,8 @@ public class ElectricVehicleRepositoryTest {
     }
 
     @Test
-    @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void updateBaseMsrpForMakeAndModel_ShouldUpdateMatchingVehicles() {
         // Arrange
         BigDecimal newMsrp = new BigDecimal("55000.00");
@@ -111,7 +119,7 @@ public class ElectricVehicleRepositoryTest {
         newVehicle.setModel("Model Y");
         newVehicle.setModelYear(2023);
         newVehicle.setBaseMSRP(new BigDecimal("60000.00"));
-        newVehicle.setDolVehicleId(123456789L);
+        newVehicle.setDolVehicleId(999999999L);  // Use a unique ID not in sample data
         newVehicle.setVehicleLocationPoint(geometryFactory.createPoint(new Coordinate(-122.33207, 47.60611)));
 
         // Act
@@ -125,10 +133,11 @@ public class ElectricVehicleRepositoryTest {
     }
 
     @Test
-    @Sql({"/sql/clean-db.sql", "/sql/sample-data.sql"})
+    @Sql(scripts = "/sql/clean-db.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(scripts = "/sql/sample-data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
     void deleteById_ShouldRemoveVehicle() {
         // Arrange
-        String vin = "SAMPLE12345";  // Should match a VIN in sample-data.sql
+        String vin = "SAMPLE1234";  // Should match a VIN in sample-data.sql
 
         // Verify vehicle exists before deletion
         assertThat(vehicleRepository.existsById(vin)).isTrue();
