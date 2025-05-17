@@ -7,6 +7,7 @@ import com.ev.apiservice.dto.UpdateMsrpRequestDTO;
 import com.ev.apiservice.mapper.ElectricVehicleMapper;
 import com.ev.apiservice.model.ElectricVehicle;
 import com.ev.apiservice.repository.ElectricVehicleRepository;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.tracing.CurrentTraceContext;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.TraceContext;
@@ -26,7 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.mockito.Mockito; // Import Mockito
-
+import io.micrometer.core.instrument.Counter;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
@@ -58,7 +59,17 @@ public class ElectricVehicleServiceTest {
     private Tracer.SpanInScope spanInScope;
     @Mock
     private TraceContext traceContext;
-
+    // Add mocks for the Counter and Timer beans
+    @Mock
+    private Counter vehicleCreationCounter;
+    @Mock
+    private Counter vehicleUpdateCounter;
+    @Mock
+    private Counter vehicleDeletionCounter;
+    @Mock
+    private Counter batchUpdateCounter;
+    @Mock
+    private Timer apiRequestTimer; // Mock the apiRequestTimer
 
     private ElectricVehicle sampleEntity;
     private ElectricVehicleDTO sampleDTO;

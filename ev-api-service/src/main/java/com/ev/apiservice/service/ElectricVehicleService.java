@@ -6,22 +6,25 @@ import com.ev.apiservice.dto.UpdateMsrpRequestDTO;
 import com.ev.apiservice.mapper.ElectricVehicleMapper;
 import com.ev.apiservice.model.ElectricVehicle;
 import com.ev.apiservice.repository.ElectricVehicleRepository;
-import io.micrometer.tracing.Span; // Import Span
-import io.micrometer.tracing.Tracer; // Import Tracer
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer; // Import Timer
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Use jakarta.transaction.Transactional if preferred
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit; // Import TimeUnit
 
 /**
  * Service class containing business logic for electric vehicle operations.
  * Manages transactions and interacts with the repository and mapper.
- * Includes manual distributed tracing spans.
+ * Includes manual distributed tracing spans and custom metrics.
  */
 @Service
 @RequiredArgsConstructor // Lombok handles constructor injection for final fields
@@ -31,15 +34,20 @@ public class ElectricVehicleService {
     private final ElectricVehicleRepository vehicleRepository;
     private final ElectricVehicleMapper vehicleMapper;
     private final Tracer tracer;
+    private final Counter vehicleCreationCounter; // Inject the creation counter
+    private final Counter vehicleUpdateCounter;   // Inject the update counter
+    private final Counter vehicleDeletionCounter; // Inject the deletion counter
+    private final Counter batchUpdateCounter;     // Inject the batch update counter
+    private final Timer apiRequestTimer;          // Inject the API request timer
 
     /**
      * Retrieves a paginated list of all electric vehicles.
      * @param pageable Pagination information (page number, size, sort order).
      * @return A Page of ElectricVehicleDTOs.
      */
-    @Transactional(readOnly = true) // Transaction is read-only for performance
+    @Transactional(readOnly = true)
     public Page<ElectricVehicleDTO> getAllVehicles(Pageable pageable) {
-        // Start a new span for this service method
+        long startTime = System.nanoTime(); // Start timing
         Span span = tracer.nextSpan().name("ElectricVehicleService.getAllVehicles").start();
         try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
             log.info("Fetching all vehicles. Page: {}, Size: {}, Sort: {}",
@@ -49,20 +57,21 @@ public class ElectricVehicleService {
             span.tag("page.size", String.valueOf(pageable.getPageSize()));
             span.tag("page.sort", pageable.getSort().toString());
 
-
             Page<ElectricVehicle> entityPage = vehicleRepository.findAll(pageable);
-            span.event("repository.findAll"); // Mark the repository call point
+            span.event("repository.findAll");
 
             Page<ElectricVehicleDTO> dtoPage = entityPage.map(vehicleMapper::toDTO);
-            span.event("mapper.toDTO.page"); // Mark the mapping point
+            span.event("mapper.toDTO.page");
 
             return dtoPage;
         } catch (Exception e) {
-            span.error(e); // Record exception on the span
-            span.tag("exception", e.getClass().getName()); // Add exception type tag
-            throw e; // Re-throw the exception
+            span.error(e);
+            span.tag("exception", e.getClass().getName());
+            throw e;
         } finally {
-            span.end(); // End the span
+            span.end();
+            // Record the duration of this method execution
+            apiRequestTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -73,25 +82,22 @@ public class ElectricVehicleService {
      */
     @Transactional(readOnly = true)
     public Optional<ElectricVehicleDTO> getVehicleByVin(String vin) {
+        long startTime = System.nanoTime(); // Start timing
         Span span = tracer.nextSpan().name("ElectricVehicleService.getVehicleByVin").start();
         try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
             log.info("Fetching vehicle by VIN: {}", vin);
-            // Add tag for VIN prefix, being mindful of sensitivity
             if (vin != null && vin.length() >= 3) {
                 span.tag("vin.prefix", vin.substring(0, 3));
             } else if (vin != null) {
                 span.tag("vin.prefix", vin);
             } else {
-                span.tag("vin", "null"); // Tag indicating null VIN
+                span.tag("vin", "null");
             }
-
 
             Optional<ElectricVehicle> vehicleOptional = vehicleRepository.findById(vin);
             span.event("repository.findById");
 
-            // Add tag indicating if vehicle was found
             span.tag("vehicle.found", String.valueOf(vehicleOptional.isPresent()));
-
 
             Optional<ElectricVehicleDTO> dtoOptional = vehicleOptional.map(vehicleMapper::toDTO);
             if (dtoOptional.isPresent()) {
@@ -105,6 +111,8 @@ public class ElectricVehicleService {
             throw e;
         } finally {
             span.end();
+            // Record the duration of this method execution
+            apiRequestTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -114,12 +122,12 @@ public class ElectricVehicleService {
      * @return The created ElectricVehicleDTO.
      * @throws IllegalArgumentException if a vehicle with the same VIN already exists.
      */
-    @Transactional // Default transaction (read-write)
+    @Transactional
     public ElectricVehicleDTO createVehicle(CreateElectricVehicleDTO createDto) {
+        long startTime = System.nanoTime(); // Start timing
         Span span = tracer.nextSpan().name("ElectricVehicleService.createVehicle").start();
         try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
             log.info("Attempting to create new vehicle with VIN: {}", createDto.getVin());
-            // Add tag for VIN prefix
             if (createDto.getVin() != null && createDto.getVin().length() >= 3) {
                 span.tag("vin.prefix", createDto.getVin().substring(0, 3));
             } else if (createDto.getVin() != null) {
@@ -127,7 +135,6 @@ public class ElectricVehicleService {
             } else {
                 span.tag("vin", "null");
             }
-
 
             span.event("checking.existence");
             if (vehicleRepository.existsById(createDto.getVin())) {
@@ -138,19 +145,19 @@ public class ElectricVehicleService {
             }
             span.tag("vehicle.exists", "false");
 
-
             ElectricVehicle entity = vehicleMapper.toEntity(createDto);
             span.event("mapper.toEntity");
 
             ElectricVehicle savedEntity = vehicleRepository.save(entity);
             span.event("repository.save");
 
+            // Increment the counter after successful creation
+            vehicleCreationCounter.increment();
             log.info("Successfully created vehicle with VIN: {}", savedEntity.getVin());
-            // Add tag for created vehicle's DOL ID prefix (mindful of sensitivity)
+
             if (savedEntity.getDolVehicleId() != null) {
                 span.tag("created.dol.id.prefix", savedEntity.getDolVehicleId().toString().substring(0, Math.min(savedEntity.getDolVehicleId().toString().length(), 3)));
             }
-
 
             ElectricVehicleDTO createdDto = vehicleMapper.toDTO(savedEntity);
             span.event("mapper.toDTO");
@@ -159,13 +166,14 @@ public class ElectricVehicleService {
         } catch (Exception e) {
             span.error(e);
             span.tag("exception", e.getClass().getName());
-            // Add a tag indicating if the exception was a known business error
             if (e instanceof IllegalArgumentException) {
                 span.tag("business.error", "true");
             }
             throw e;
         } finally {
             span.end();
+            // Record the duration of this method execution
+            apiRequestTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -178,10 +186,10 @@ public class ElectricVehicleService {
      */
     @Transactional
     public ElectricVehicleDTO updateVehicle(String vin, ElectricVehicleDTO updateDto) {
+        long startTime = System.nanoTime(); // Start timing
         Span span = tracer.nextSpan().name("ElectricVehicleService.updateVehicle").start();
         try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
             log.info("Attempting to update vehicle with VIN: {}", vin);
-            // Add tag for VIN prefix
             if (vin != null && vin.length() >= 3) {
                 span.tag("vin.prefix", vin.substring(0, 3));
             } else if (vin != null) {
@@ -189,7 +197,6 @@ public class ElectricVehicleService {
             } else {
                 span.tag("vin", "null");
             }
-
 
             span.event("fetching.existing");
             ElectricVehicle existingEntity = vehicleRepository.findById(vin)
@@ -201,8 +208,6 @@ public class ElectricVehicleService {
                     });
             span.tag("vehicle.found", "true");
 
-
-            // If DTO VIN is present and different, log error and throw exception.
             if (updateDto.getVin() != null && !vin.equals(updateDto.getVin())) {
                 String errorMessage = String.format("Path VIN (%s) does not match DTO VIN (%s). " +
                         "The resource identified by the path cannot be changed.", vin, updateDto.getVin());
@@ -212,16 +217,16 @@ public class ElectricVehicleService {
             }
             span.tag("vin.mismatch", "false");
 
-            // The mapper will update fields of 'existingEntity' based on 'updateDto'.
-            // The VIN of 'existingEntity' (the primary key) remains unchanged.
             span.event("mapper.updateEntityFromDto");
             vehicleMapper.updateEntityFromDto(updateDto, existingEntity);
 
             span.event("repository.save");
             ElectricVehicle updatedEntity = vehicleRepository.save(existingEntity);
 
+            // Increment the update counter after successful update
+            vehicleUpdateCounter.increment();
             log.info("Successfully updated vehicle with VIN: {}", updatedEntity.getVin());
-            // Add tag for updated vehicle's DOL ID prefix
+
             if (updatedEntity.getDolVehicleId() != null) {
                 span.tag("updated.dol.id.prefix", updatedEntity.getDolVehicleId().toString().substring(0, Math.min(updatedEntity.getDolVehicleId().toString().length(), 3)));
             }
@@ -237,6 +242,8 @@ public class ElectricVehicleService {
             throw e;
         } finally {
             span.end();
+            // Record the duration of this method execution
+            apiRequestTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -247,10 +254,10 @@ public class ElectricVehicleService {
      */
     @Transactional
     public void deleteVehicle(String vin) {
+        long startTime = System.nanoTime(); // Start timing
         Span span = tracer.nextSpan().name("ElectricVehicleService.deleteVehicle").start();
         try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
             log.info("Attempting to delete vehicle with VIN: {}", vin);
-            // Add tag for VIN prefix
             if (vin != null && vin.length() >= 3) {
                 span.tag("vin.prefix", vin.substring(0, 3));
             } else if (vin != null) {
@@ -270,6 +277,9 @@ public class ElectricVehicleService {
 
             span.event("repository.deleteById");
             vehicleRepository.deleteById(vin);
+
+            // Increment the deletion counter after successful deletion
+            vehicleDeletionCounter.increment();
             log.info("Successfully deleted vehicle with VIN: {}", vin);
 
         } catch (Exception e) {
@@ -281,6 +291,8 @@ public class ElectricVehicleService {
             throw e;
         } finally {
             span.end();
+            // Record the duration of this method execution
+            apiRequestTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
         }
     }
 
@@ -292,6 +304,7 @@ public class ElectricVehicleService {
      */
     @Transactional
     public int updateBaseMsrpForMakeAndModel(UpdateMsrpRequestDTO msrpRequest) {
+        long startTime = System.nanoTime(); // Start timing
         Span span = tracer.nextSpan().name("ElectricVehicleService.updateBaseMsrpForMakeAndModel").start();
         try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
             String make = msrpRequest.getMake();
@@ -299,14 +312,11 @@ public class ElectricVehicleService {
             log.info("Attempting to update Base MSRP for Make: '{}', Model: '{}' to {}",
                     make, model, msrpRequest.getNewBaseMSRP());
 
-            // Add tags for make and model
             if (make != null) span.tag("update.make", make);
             if (model != null) span.tag("update.model", model);
             if (msrpRequest.getNewBaseMSRP() != null) span.tag("update.new_msrp", msrpRequest.getNewBaseMSRP().toString());
 
-
             span.event("repository.updateBaseMsrpForMakeAndModel");
-            // The repository query handles case-insensitivity for make and model.
             int updatedCount = vehicleRepository.updateBaseMsrpForMakeAndModel(
                     make,
                     model,
@@ -314,7 +324,8 @@ public class ElectricVehicleService {
             );
             span.tag("update.count", String.valueOf(updatedCount));
 
-
+            // Increment the batch update counter after successful batch update
+            batchUpdateCounter.increment();
             log.info("Successfully updated Base MSRP for {} vehicles matching Make: '{}' and Model: '{}'.",
                     updatedCount, make, model);
             return updatedCount;
@@ -324,6 +335,11 @@ public class ElectricVehicleService {
             throw e;
         } finally {
             span.end();
+            // Record the duration of this method execution
+            apiRequestTimer.record(System.nanoTime() - startTime, TimeUnit.NANOSECONDS);
         }
     }
+
+    // Note: You might also want to use the databaseOperationTimer around actual repository calls
+    // if you want to differentiate between service layer logic and database time.
 }
