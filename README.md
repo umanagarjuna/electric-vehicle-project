@@ -212,12 +212,62 @@ java -jar target/ev-api-client-java-1.0-SNAPSHOT-jar-with-dependencies.jar list
 
 # Get details of a specific vehicle
 java -jar target/ev-api-client-java-1.0-SNAPSHOT-jar-with-dependencies.jar get 3MW39FF06P
+```
 
-# Create a new vehicle
+### Creating Vehicles
+
+You can create new vehicles either by specifying individual fields via command-line parameters or by using a JSON file:
+
+#### Using Command-Line Parameters:
+
+```powershell
+# Create a new vehicle with command-line parameters
 java -jar target/ev-api-client-java-1.0-SNAPSHOT-jar-with-dependencies.jar create --vin "TEST123ABC" --make "TESLA" --model "Model 3" --year 2023 --dol-id 123456789 --county "King" --city "Seattle" --state "WA" --zip "98101" --ev-type "Battery Electric Vehicle (BEV)" --range 310 --msrp 45000.00
+```
 
+#### Using a JSON File:
+
+For complex vehicle data, using a JSON file is more convenient:
+
+1. Create a JSON file (e.g., `new-vehicle.json`) with the vehicle data:
+
+```json
+{
+  "vin": "VINPOST010",
+  "county": "King",
+  "city": "Seattle",
+  "state": "WA",
+  "postalCode": "98101",
+  "modelYear": 2023,
+  "make": "TESTTESLA",
+  "model": "TESTModelY",
+  "electricVehicleType": "Battery Electric Vehicle (BEV)",
+  "cafvEligibilityStatus": "Clean Alternative Fuel Vehicle Eligible",
+  "electricRange": 300,
+  "baseMSRP": 55000,
+  "legislativeDistrict": 43,
+  "dolVehicleId": "2345678927",
+  "vehicleLocation": {
+    "latitude": 47.608013,
+    "longitude": -122.335167
+  },
+  "electricUtility": "PUGET SOUND ENERGY INC||CITY OF TACOMA - (WA)",
+  "censusTract2020": "53033007101"
+}
+```
+
+2. Use the file with the create command:
+
+```powershell
+# Create a new vehicle from a JSON file
+java -jar target/ev-api-client-java-1.0-SNAPSHOT-jar-with-dependencies.jar create --file new-vehicle.json
+```
+
+This approach is ideal for testing with complex data or when creating multiple vehicles with similar properties.
+
+```powershell
 # Verify the new vehicle is created
-java -jar target/ev-api-client-java-1.0-SNAPSHOT-jar-with-dependencies.jar get TEST123ABC
+java -jar target/ev-api-client-java-1.0-SNAPSHOT-jar-with-dependencies.jar get VINPOST010
 
 # Update the vehicle's MSRP along with others of the same make and model
 java -jar target/ev-api-client-java-1.0-SNAPSHOT-jar-with-dependencies.jar update-msrp-batch --make "TESLA" --model "Model 3" --new-msrp 47500.00
