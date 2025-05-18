@@ -1,0 +1,12 @@
+image:
+  repository: ev-api-service
+  tag: "latest"
+  # This is the key setting - never try to pull, only use local images
+  pullPolicy: Never
+
+# Keep your PostgreSQL configurations
+postgresql:
+  enabled: true
+  auth:
+    password: "admin"
+    database: "electric_vehicle_db"

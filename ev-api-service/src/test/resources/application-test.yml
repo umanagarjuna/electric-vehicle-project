@@ -1,0 +1,59 @@
+# Test configuration properties
+
+# Use H2 in-memory database for testing
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password: sa
+    driver-class-name: org.h2.Driver
+
+  # Enable H2 console (useful for debugging)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Hibernate settings for testing
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.spatial.dialect.h2geodb.GeoDBDialect
+    show-sql: true
+
+  # Flyway for test database migration
+  flyway:
+    enabled: false
+
+  # SQL initialization
+  sql:
+    init:
+      platform: h2
+      mode: never
+      schema-locations: classpath:sql/h2-postgis-init.sql
+
+  main:
+    allow-bean-definition-overriding: true
+
+  # Task execution configuration
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 4
+        queue-capacity: 10
+        keep-alive: 60s
+        allow-core-thread-timeout: true
+        thread-name-prefix: async-test-
+
+# Logging configuration
+logging:
+  level:
+    com.ev.apiservice: DEBUG
+    org.springframework: INFO
+    org.hibernate: INFO
+    org.springframework.jdbc.core: DEBUG
+    org.hibernate.SQL: DEBUG

@@ -1,0 +1,3 @@
+"VIN (1-10)","County","City","State","Postal Code","Model Year","Make","Model","Electric Vehicle Type","Clean Alternative Fuel Vehicle (CAFV) Eligibility","Electric Range","Base MSRP","Legislative District","DOL Vehicle ID","Vehicle Location","Electric Utility","2020 Census Tract"
+"TEST123456","King","Seattle","WA","98101","2021","TESLA","Model 3","Battery Electric Vehicle (BEV)","Clean Alternative Fuel Vehicle Eligible","350","41990","43","123456789","POINT (-122.3321 47.6062)","SEATTLE CITY LIGHT","53033001100"
+"TEST234567","Pierce","Tacoma","WA","98402","2022","TESLA","Model Y","Battery Electric Vehicle (BEV)","Clean Alternative Fuel Vehicle Eligible","330","58990","27","234567890","POINT (-122.4400 47.2529)","TACOMA PUBLIC UTILITIES","53053061100"

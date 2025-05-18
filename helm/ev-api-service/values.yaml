@@ -1,0 +1,80 @@
+﻿---
+# values.yaml
+# Simple values for ev-api-service
+
+# Application configuration
+replicaCount: 1
+
+image:
+  repository: yourusername/ev-api-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+# Specify the name of the Kubernetes secret containing credentials
+# for your local registry. If using Minikube's built-in Docker daemon,
+# you might not need this. If using a separate local registry that
+# requires authentication, create a secret and put its name here.
+# - name: regcred
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2048Mi
+  requests:
+    cpu: 500m
+    memory: 1024Mi
+
+# Probe configuration
+probes:
+  livenessInitialDelaySeconds: 60
+  readinessInitialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 5
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    password: "admin"
+    database: electric_vehicle_db
+    username: postgres
+  primary:
+    initdb:
+      extensions:
+        - postgis
+    # Add these PostgreSQL configuration settings
+    extraEnvVars:
+      - name: POSTGRESQL_STATEMENT_TIMEOUT
+        value: "0"
+      - name: POSTGRESQL_IDLE_IN_TRANSACTION_SESSION_TIMEOUT
+        value: "3600000"  # 1 hour
+    resources:
+      requests:
+        memory: 1Gi
+        cpu: 500m
+      limits:
+        memory: 2Gi
+        cpu: 1000m

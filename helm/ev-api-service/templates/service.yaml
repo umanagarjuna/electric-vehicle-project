@@ -1,0 +1,16 @@
+# service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ev-api-service
+  labels:
+    app: ev-api-service
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: ev-api-service

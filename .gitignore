@@ -1,0 +1,8 @@
+/.idea
+/data-loader-java/target/classes
+/data-loader-java/target
+/ev-api-client-java/target/classes
+/ev-api-client-java/target
+/ev-api-service/target
+/ev-api-service/${project.build.directory}/classes
+/helm/ev-api-service/charts
